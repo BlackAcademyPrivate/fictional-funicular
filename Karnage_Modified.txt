@@ -951,6 +951,7 @@ Karnage.NotificationWidth = nil
 Karnage.FrameTransparency = 0.85
 Karnage.FrameColor = Color3.fromRGB(45, 45, 45)
 Karnage.MainFrameColor = Color3.fromRGB(15, 15, 15)
+Karnage.UITransparency = 0
 
 Karnage.ToggleIconAssetId = "rbxassetid://99020804096711"
 Karnage.IgnoredElements = {}
@@ -1172,6 +1173,45 @@ function Karnage.LoadPrivacySettings()
     return success, result
 end
 
+function Karnage.SaveUITransparencySettings()
+    local success, result = pcall(function()
+        local data = {
+            Transparency = Karnage.UITransparency
+        }
+        local json = HttpService:JSONEncode(data)
+        if writefile then
+            if not isfolder(Karnage.ConfigFolder) then
+                makefolder(Karnage.ConfigFolder)
+            end
+            writefile(Karnage.ConfigFolder .. "/uitransparency.json", json)
+            return true
+        else
+            return false, "writefile function not available"
+        end
+    end)
+    if not success then
+        print("Error saving UI transparency settings:", result)
+    end
+    return success, result
+end
+
+function Karnage.LoadUITransparencySettings()
+    local success, result = pcall(function()
+        if readfile and isfile(Karnage.ConfigFolder .. "/uitransparency.json") then
+            local json = readfile(Karnage.ConfigFolder .. "/uitransparency.json")
+            local data = HttpService:JSONDecode(json)
+            Karnage.UITransparency = data.Transparency or 0
+            return true
+        else
+            return false, "UI transparency settings file not found"
+        end
+    end)
+    if not success then
+        print("Error loading UI transparency settings:", result)
+    end
+    return success, result
+end
+
 function Karnage.SaveConfig(name)
     if not name or name == "" then
         print("[ERROR] Cannot save config: No name provided")
@@ -1337,7 +1377,7 @@ function Karnage.LoadConfigList()
             for _, file in pairs(files) do
                 local fileName = string.match(file, "[^/\\]+$")
                 local configName = string.match(fileName, "(.+)%.json$")
-                if configName and configName ~= "autoload" and configName ~= "privacy" and configName ~= "resize" and configName ~= "language" then
+                if configName and configName ~= "autoload" and configName ~= "privacy" and configName ~= "resize" and configName ~= "language" and configName ~= "uitransparency" then
                     table.insert(Karnage.SavedConfigs, configName)
                 end
             end
@@ -1618,6 +1658,7 @@ function Karnage.Destroy()
     _G[interfaceName] = nil
     
     Karnage.SaveResizeSettings()
+    Karnage.SaveUITransparencySettings()
     _isDestroyed = true
     for _, c in ipairs(_connections) do
         if c and c.Connected then c:Disconnect() end
@@ -1705,6 +1746,7 @@ Karnage.Create = LPH_NO_VIRTUALIZE(function(config)
     Karnage.LoadAutoLoadSettings()
     Karnage.LoadPrivacySettings()
     Karnage.LoadResizeSettings()
+    Karnage.LoadUITransparencySettings()
 
     
     local parent
@@ -1945,6 +1987,7 @@ Karnage.Create = LPH_NO_VIRTUALIZE(function(config)
     })
     _trackTween(mainSizeTween)
     mainSizeTween:Play()
+    Main.BackgroundTransparency = Karnage.UITransparency
     
     
     local ResizeHandle = Karnage.Instance("ImageButton", {
@@ -5655,10 +5698,12 @@ Karnage.Create = LPH_NO_VIRTUALIZE(function(config)
             Name = "UI Transparency",
             Min = 0,
             Max = 0.20,
-            Default = 0,
+            Default = Karnage.UITransparency,
             Rounding = 2,
             Callback = function(value)
+                Karnage.UITransparency = value
                 Main.BackgroundTransparency = value
+                Karnage.SaveUITransparencySettings()
             end
         })
         
